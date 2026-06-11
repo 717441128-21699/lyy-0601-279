@@ -23,19 +23,31 @@ const QUESTIONS_TEMPLATE = [
 ];
 
 export default function ExportPanel() {
-  const { houses, getSortedHouses, getTotalRating } = useHouseStore();
+  const {
+    houses,
+    getFilteredHouses,
+    getCandidateHouses,
+    getTotalRating,
+    hasActiveFilters,
+  } = useHouseStore();
   const [activeTab, setActiveTab] = useState<TabType>("viewing");
   const [copied, setCopied] = useState(false);
 
-  const sortedHouses = getSortedHouses();
+  const filteredHouses = getFilteredHouses();
+  const candidateHouses = getCandidateHouses();
 
   const generateViewingList = (): string => {
-    if (houses.length === 0) return "暂无房源信息";
+    const exportHouses = hasActiveFilters() ? filteredHouses : houses;
+    if (exportHouses.length === 0) return "暂无房源信息";
 
     let text = "📋 看房清单\n";
-    text += "=".repeat(30) + "\n\n";
+    text += "=".repeat(30) + "\n";
+    if (hasActiveFilters()) {
+      text += `（已应用筛选条件，共${exportHouses.length}套）\n`;
+    }
+    text += "\n";
 
-    houses.forEach((house, index) => {
+    exportHouses.forEach((house, index) => {
       const rating = getTotalRating(house);
       text += `【第${index + 1}套】${house.name || "未命名房源"}\n`;
       text += `  📍 地址：${house.address || "未填写"}\n`;
@@ -98,13 +110,16 @@ export default function ExportPanel() {
   };
 
   const generateCandidateList = (): string => {
-    if (sortedHouses.length === 0) return "暂无候选房源";
-
-    const topHouses = sortedHouses.slice(0, 5);
+    const topHouses = candidateHouses.slice(0, 5);
+    if (topHouses.length === 0) return "暂无候选房源";
 
     let text = "🏆 最终候选列表\n";
     text += "=".repeat(30) + "\n";
-    text += `（按综合评分排序，共${topHouses.length}套）\n\n`;
+    text += `（按加权综合评分降序排列，共${topHouses.length}套）\n`;
+    if (hasActiveFilters()) {
+      text += `（已应用筛选条件）\n`;
+    }
+    text += "\n";
 
     topHouses.forEach((house, index) => {
       const rating = getTotalRating(house);
@@ -170,12 +185,21 @@ export default function ExportPanel() {
     <div className="bg-white rounded-2xl shadow-card border border-warm-100 overflow-hidden">
       <div className="px-6 py-4 border-b border-warm-100 bg-gradient-to-r from-warm-50 to-white">
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-lg font-semibold text-gray-800">
-            导出区
-          </h2>
+          <div>
+            <h2 className="font-serif text-lg font-semibold text-gray-800">
+              导出区
+            </h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {activeTab === "candidates"
+                ? "候选列表始终按综合评分排序"
+                : hasActiveFilters() && activeTab === "viewing"
+                ? "已应用当前筛选条件"
+                : "一键复制，粘贴到备忘录或微信"}
+            </p>
+          </div>
           <button
             onClick={handleCopy}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 shrink-0 ${
               copied
                 ? "bg-green-100 text-green-600"
                 : "bg-primary-500 text-white hover:bg-primary-600"

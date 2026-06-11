@@ -20,6 +20,21 @@ export interface Ratings {
   comfort: number;
 }
 
+export interface Weights {
+  safety: number;
+  valueForMoney: number;
+  convenience: number;
+  comfort: number;
+}
+
+export interface FilterConditions {
+  rentMin: number | null;
+  rentMax: number | null;
+  commuteMax: number | null;
+  roomType: string;
+  moveInDateBefore: string;
+}
+
 export interface House {
   id: string;
   name: string;
@@ -88,3 +103,18 @@ export const ROOM_TYPE_OPTIONS = [
   "整租两居",
   "整租三居",
 ];
+
+export const DEFAULT_WEIGHTS: Weights = {
+  safety: 25,
+  valueForMoney: 25,
+  convenience: 25,
+  comfort: 25,
+};
+
+export const DEFAULT_FILTERS: FilterConditions = {
+  rentMin: null,
+  rentMax: null,
+  commuteMax: null,
+  roomType: "",
+  moveInDateBefore: "",
+};

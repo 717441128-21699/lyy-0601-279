@@ -1,6 +1,16 @@
+import { useState } from "react";
 import { useHouseStore } from "@/store/useHouseStore";
 import type { SortField } from "@/types";
-import { ArrowUpDown, ArrowUp, ArrowDown, Home } from "lucide-react";
+import { ROOM_TYPE_OPTIONS } from "@/types";
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Home,
+  Filter,
+  X,
+  RotateCcw,
+} from "lucide-react";
 
 const SORT_COLUMNS: {
   field: SortField;
@@ -30,18 +40,28 @@ const levelColor = (level: string) => {
 export default function CompareTable() {
   const {
     getSortedHouses,
+    getFilteredHouses,
+    houses,
     selectedHouseId,
     setSelectedHouse,
     sortField,
     sortOrder,
     toggleSort,
     getTotalRating,
+    filters,
+    setFilters,
+    resetFilters,
+    hasActiveFilters,
   } = useHouseStore();
+  const [showFilters, setShowFilters] = useState(false);
 
   const sortedHouses = getSortedHouses();
+  const filteredCount = getFilteredHouses().length;
+  const totalCount = houses.length;
 
   const getCostColor = (rent: number) => {
     const allRents = sortedHouses.map((h) => h.rent + h.deposit / 12);
+    if (allRents.length === 0) return "text-gray-700";
     const min = Math.min(...allRents);
     const max = Math.max(...allRents);
     const cost = rent;
@@ -50,20 +70,163 @@ export default function CompareTable() {
     return "text-gray-700";
   };
 
+  const handleFilterChange = (key: string, value: string | number | null) => {
+    if (key === "rentMin" || key === "rentMax" || key === "commuteMax") {
+      const numValue =
+        value === "" || value === null ? null : Number(value);
+      setFilters({ [key]: numValue });
+    } else {
+      setFilters({ [key]: value });
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-card border border-warm-100 overflow-hidden">
       <div className="px-6 py-4 border-b border-warm-100 bg-gradient-to-r from-warm-50 to-white">
-        <h2 className="font-serif text-lg font-semibold text-gray-800">
-          房源对比表
-        </h2>
-        <p className="text-sm text-gray-500 mt-1">点击表头进行排序，绿色为最优</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-serif text-lg font-semibold text-gray-800">
+              房源对比表
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              点击表头进行排序，绿色为最优
+              {hasActiveFilters() && (
+                <span className="ml-2 px-2 py-0.5 rounded-full bg-primary-100 text-primary-600 text-xs font-medium">
+                  筛选中 {filteredCount}/{totalCount}
+                </span>
+              )}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
+              showFilters || hasActiveFilters()
+                ? "bg-primary-100 text-primary-600"
+                : "text-gray-500 hover:bg-gray-100"
+            }`}
+          >
+            {showFilters ? (
+              <X className="w-4 h-4" />
+            ) : (
+              <Filter className="w-4 h-4" />
+            )}
+            筛选
+            {hasActiveFilters() && !showFilters && (
+              <span className="w-2 h-2 rounded-full bg-primary-500" />
+            )}
+          </button>
+        </div>
       </div>
+
+      {showFilters && (
+        <div className="px-6 py-4 border-b border-gray-100 bg-warm-50/30 animate-slide-up">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">
+                租金最低（元）
+              </label>
+              <input
+                type="number"
+                value={filters.rentMin ?? ""}
+                onChange={(e) =>
+                  handleFilterChange("rentMin", e.target.value)
+                }
+                placeholder="不限"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">
+                租金最高（元）
+              </label>
+              <input
+                type="number"
+                value={filters.rentMax ?? ""}
+                onChange={(e) =>
+                  handleFilterChange("rentMax", e.target.value)
+                }
+                placeholder="不限"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">
+                通勤上限（分钟）
+              </label>
+              <input
+                type="number"
+                value={filters.commuteMax ?? ""}
+                onChange={(e) =>
+                  handleFilterChange("commuteMax", e.target.value)
+                }
+                placeholder="不限"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">
+                房型
+              </label>
+              <select
+                value={filters.roomType}
+                onChange={(e) =>
+                  handleFilterChange("roomType", e.target.value)
+                }
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white"
+              >
+                <option value="">不限</option>
+                {ROOM_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">
+                可入住日期不晚于
+              </label>
+              <input
+                type="date"
+                value={filters.moveInDateBefore}
+                onChange={(e) =>
+                  handleFilterChange("moveInDateBefore", e.target.value)
+                }
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end mt-4">
+            <button
+              onClick={resetFilters}
+              className="text-xs text-gray-500 hover:text-primary-600 flex items-center gap-1"
+            >
+              <RotateCcw className="w-3 h-3" />
+              重置筛选
+            </button>
+          </div>
+        </div>
+      )}
 
       {sortedHouses.length === 0 ? (
         <div className="py-16 text-center text-gray-400">
           <Home className="w-16 h-16 mx-auto mb-4 opacity-20" />
-          <p>暂无房源数据</p>
-          <p className="text-sm mt-1">添加房源后即可在此对比</p>
+          {hasActiveFilters() ? (
+            <>
+              <p>没有符合筛选条件的房源</p>
+              <button
+                onClick={resetFilters}
+                className="mt-2 text-sm text-primary-500 hover:text-primary-600"
+              >
+                清除筛选条件
+              </button>
+            </>
+          ) : (
+            <>
+              <p>暂无房源数据</p>
+              <p className="text-sm mt-1">添加房源后即可在此对比</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -130,7 +293,7 @@ export default function CompareTable() {
                             {house.name || "未命名"}
                           </div>
                           <div className="text-xs text-gray-500 truncate max-w-[140px]">
-                            {house.area}㎡ · {house.roomType}
+                            {house.area}㎡ · {house.roomType || "不限"}
                           </div>
                         </div>
                       </div>

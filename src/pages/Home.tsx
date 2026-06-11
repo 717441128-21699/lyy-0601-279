@@ -5,6 +5,7 @@ import CompareTable from "@/components/CompareTable";
 import MapNotes from "@/components/MapNotes";
 import RatingCard from "@/components/RatingCard";
 import ExportPanel from "@/components/ExportPanel";
+import DataManager from "@/components/DataManager";
 import { Home as HomeIcon, Sparkles } from "lucide-react";
 
 export default function Home() {
@@ -61,6 +62,7 @@ export default function Home() {
             ) : (
               <HouseList onAdd={handleAdd} onEdit={handleEdit} />
             )}
+            {!showForm && <DataManager />}
             <RatingCard />
           </div>
 

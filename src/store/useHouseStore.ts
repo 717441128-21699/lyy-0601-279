@@ -1,12 +1,21 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { House, SortField, SortOrder } from "@/types";
+import type {
+  House,
+  SortField,
+  SortOrder,
+  Weights,
+  FilterConditions,
+} from "@/types";
+import { DEFAULT_WEIGHTS, DEFAULT_FILTERS } from "@/types";
 
 interface HouseStore {
   houses: House[];
   selectedHouseId: string | null;
   sortField: SortField;
   sortOrder: SortOrder;
+  weights: Weights;
+  filters: FilterConditions;
   addHouse: (house: Omit<House, "id" | "createdAt" | "updatedAt">) => void;
   updateHouse: (id: string, updates: Partial<House>) => void;
   deleteHouse: (id: string) => void;
@@ -14,8 +23,17 @@ interface HouseStore {
   setSortField: (field: SortField) => void;
   setSortOrder: (order: SortOrder) => void;
   toggleSort: (field: SortField) => void;
+  setWeights: (weights: Partial<Weights>) => void;
+  resetWeights: () => void;
+  setFilters: (filters: Partial<FilterConditions>) => void;
+  resetFilters: () => void;
+  importData: (data: { houses: House[]; weights?: Weights }) => boolean;
+  exportData: () => string;
+  getFilteredHouses: () => House[];
   getSortedHouses: () => House[];
+  getCandidateHouses: () => House[];
   getTotalRating: (house: House) => number;
+  hasActiveFilters: () => boolean;
 }
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -38,6 +56,8 @@ export const useHouseStore = create<HouseStore>()(
       selectedHouseId: null,
       sortField: "totalCost",
       sortOrder: "asc",
+      weights: DEFAULT_WEIGHTS,
+      filters: DEFAULT_FILTERS,
 
       addHouse: (houseData) => {
         const now = new Date().toISOString();
@@ -91,14 +111,127 @@ export const useHouseStore = create<HouseStore>()(
         });
       },
 
+      setWeights: (weights) => {
+        set((state) => {
+          const newWeights = { ...state.weights, ...weights };
+          const total =
+            newWeights.safety +
+            newWeights.valueForMoney +
+            newWeights.convenience +
+            newWeights.comfort;
+          if (total > 0) {
+            return { weights: newWeights };
+          }
+          return state;
+        });
+      },
+
+      resetWeights: () => set({ weights: DEFAULT_WEIGHTS }),
+
+      setFilters: (filters) => {
+        set((state) => ({
+          filters: { ...state.filters, ...filters },
+        }));
+      },
+
+      resetFilters: () => set({ filters: DEFAULT_FILTERS }),
+
+      importData: (data) => {
+        try {
+          if (!data.houses || !Array.isArray(data.houses)) {
+            return false;
+          }
+          const validHouses = data.houses.map((h) => ({
+            ...h,
+            id: h.id || generateId(),
+            createdAt: h.createdAt || new Date().toISOString(),
+            updatedAt: h.updatedAt || new Date().toISOString(),
+            ratings: h.ratings || {
+              safety: 3,
+              valueForMoney: 3,
+              convenience: 3,
+              comfort: 3,
+            },
+            mapNotes: h.mapNotes || [],
+          }));
+          const patch: Partial<HouseStore> = {
+            houses: validHouses,
+          };
+          if (data.weights) {
+            patch.weights = { ...DEFAULT_WEIGHTS, ...data.weights };
+          }
+          if (validHouses.length > 0) {
+            patch.selectedHouseId = validHouses[0].id;
+          }
+          set(patch);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      exportData: () => {
+        const { houses, weights } = get();
+        const data = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          houses,
+          weights,
+        };
+        return JSON.stringify(data, null, 2);
+      },
+
       getTotalRating: (house) => {
         const { safety, valueForMoney, convenience, comfort } = house.ratings;
-        return (safety + valueForMoney + convenience + comfort) / 4;
+        const weights = get().weights;
+        const totalWeight =
+          weights.safety +
+          weights.valueForMoney +
+          weights.convenience +
+          weights.comfort;
+        if (totalWeight === 0) return 0;
+        const weightedSum =
+          safety * (weights.safety / totalWeight) * 5 +
+          valueForMoney * (weights.valueForMoney / totalWeight) * 5 +
+          convenience * (weights.convenience / totalWeight) * 5 +
+          comfort * (weights.comfort / totalWeight) * 5;
+        return weightedSum / 5;
+      },
+
+      hasActiveFilters: () => {
+        const f = get().filters;
+        return (
+          f.rentMin !== null ||
+          f.rentMax !== null ||
+          f.commuteMax !== null ||
+          f.roomType !== "" ||
+          f.moveInDateBefore !== ""
+        );
+      },
+
+      getFilteredHouses: () => {
+        const { houses, filters } = get();
+        return houses.filter((house) => {
+          if (filters.rentMin !== null && house.rent < filters.rentMin)
+            return false;
+          if (filters.rentMax !== null && house.rent > filters.rentMax)
+            return false;
+          if (filters.commuteMax !== null && house.commuteTime > filters.commuteMax)
+            return false;
+          if (filters.roomType && house.roomType !== filters.roomType)
+            return false;
+          if (filters.moveInDateBefore) {
+            if (!house.moveInDate) return false;
+            if (new Date(house.moveInDate) > new Date(filters.moveInDateBefore))
+              return false;
+          }
+          return true;
+        });
       },
 
       getSortedHouses: () => {
-        const { houses, sortField, sortOrder } = get();
-        const sorted = [...houses];
+        const { sortField, sortOrder, getFilteredHouses, getTotalRating } = get();
+        const sorted = [...getFilteredHouses()];
 
         const getValue = (house: House): number => {
           switch (sortField) {
@@ -115,7 +248,7 @@ export const useHouseStore = create<HouseStore>()(
             case "riskNotes":
               return levelToValue(house.riskNotes);
             case "rating":
-              return get().getTotalRating(house);
+              return getTotalRating(house);
             default:
               return 0;
           }
@@ -127,6 +260,13 @@ export const useHouseStore = create<HouseStore>()(
           return sortOrder === "asc" ? valA - valB : valB - valA;
         });
 
+        return sorted;
+      },
+
+      getCandidateHouses: () => {
+        const { getFilteredHouses, getTotalRating } = get();
+        const sorted = [...getFilteredHouses()];
+        sorted.sort((a, b) => getTotalRating(b) - getTotalRating(a));
         return sorted;
       },
     }),
