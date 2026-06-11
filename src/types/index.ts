@@ -1,0 +1,90 @@
+export type MapNoteCategory =
+  | "business"
+  | "subway"
+  | "school"
+  | "hospital"
+  | "food"
+  | "other";
+
+export interface MapNote {
+  id: string;
+  category: MapNoteCategory;
+  name: string;
+  description: string;
+}
+
+export interface Ratings {
+  safety: number;
+  valueForMoney: number;
+  convenience: number;
+  comfort: number;
+}
+
+export interface House {
+  id: string;
+  name: string;
+  address: string;
+  rent: number;
+  deposit: number;
+  area: number;
+  roomType: string;
+  commuteTime: number;
+  roommates: string;
+  moveInDate: string;
+  lighting: string;
+  noise: string;
+  facilities: string;
+  riskNotes: string;
+  mapNotes: MapNote[];
+  ratings: Ratings;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SortField =
+  | "totalCost"
+  | "commuteTime"
+  | "lighting"
+  | "noise"
+  | "facilities"
+  | "riskNotes"
+  | "rating";
+
+export type SortOrder = "asc" | "desc";
+
+export const MAP_NOTE_CATEGORIES: {
+  value: MapNoteCategory;
+  label: string;
+  color: string;
+  bgColor: string;
+}[] = [
+  { value: "business", label: "商圈", color: "text-primary-600", bgColor: "bg-primary-100" },
+  { value: "subway", label: "地铁", color: "text-accent-600", bgColor: "bg-accent-100" },
+  { value: "school", label: "学校", color: "text-blue-600", bgColor: "bg-blue-100" },
+  { value: "hospital", label: "医院", color: "text-red-600", bgColor: "bg-red-100" },
+  { value: "food", label: "美食", color: "text-orange-600", bgColor: "bg-orange-100" },
+  { value: "other", label: "其他", color: "text-gray-600", bgColor: "bg-gray-100" },
+];
+
+export const RATING_DIMENSIONS: {
+  key: keyof Ratings;
+  label: string;
+  icon: string;
+}[] = [
+  { key: "safety", label: "安全性", icon: "shield" },
+  { key: "valueForMoney", label: "性价比", icon: "dollar-sign" },
+  { key: "convenience", label: "便利度", icon: "map-pin" },
+  { key: "comfort", label: "舒适度", icon: "home" },
+];
+
+export const LEVEL_OPTIONS = ["优秀", "良好", "一般", "较差", "很差"];
+
+export const ROOM_TYPE_OPTIONS = [
+  "主卧独卫",
+  "主卧公卫",
+  "次卧",
+  "单间",
+  "整租一居",
+  "整租两居",
+  "整租三居",
+];
