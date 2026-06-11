@@ -19,6 +19,10 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
     address: "",
     rent: 0,
     deposit: 0,
+    agencyFee: 0,
+    movingFee: 0,
+    commuteCostMonthly: 0,
+    utilityEstimate: 0,
     area: 0,
     roomType: "",
     commuteTime: 0,
@@ -29,6 +33,12 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
     facilities: "一般",
     riskNotes: "一般",
     status: "pending" as HouseStatus,
+    viewingDate: "",
+    contactName: "",
+    contactPhone: "",
+    viewingNotes: "",
+    eliminateReason: "",
+    shortlistReason: "",
   });
 
   useEffect(() => {
@@ -38,6 +48,10 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
         address: existingHouse.address,
         rent: existingHouse.rent,
         deposit: existingHouse.deposit,
+        agencyFee: existingHouse.agencyFee || 0,
+        movingFee: existingHouse.movingFee || 0,
+        commuteCostMonthly: existingHouse.commuteCostMonthly || 0,
+        utilityEstimate: existingHouse.utilityEstimate || 0,
         area: existingHouse.area,
         roomType: existingHouse.roomType,
         commuteTime: existingHouse.commuteTime,
@@ -48,6 +62,12 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
         facilities: existingHouse.facilities || "一般",
         riskNotes: existingHouse.riskNotes || "一般",
         status: existingHouse.status || "pending",
+        viewingDate: existingHouse.viewingDate || "",
+        contactName: existingHouse.contactName || "",
+        contactPhone: existingHouse.contactPhone || "",
+        viewingNotes: existingHouse.viewingNotes || "",
+        eliminateReason: existingHouse.eliminateReason || "",
+        shortlistReason: existingHouse.shortlistReason || "",
       });
     }
   }, [existingHouse]);
@@ -59,7 +79,14 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
     setFormData((prev) => ({
       ...prev,
       [name]:
-        name === "rent" || name === "deposit" || name === "area" || name === "commuteTime"
+        name === "rent" ||
+        name === "deposit" ||
+        name === "area" ||
+        name === "commuteTime" ||
+        name === "agencyFee" ||
+        name === "movingFee" ||
+        name === "commuteCostMonthly" ||
+        name === "utilityEstimate"
           ? Number(value) || 0
           : value,
     }));
@@ -155,6 +182,62 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              中介费（元）
+            </label>
+            <input
+              type="number"
+              name="agencyFee"
+              value={formData.agencyFee || ""}
+              onChange={handleChange}
+              placeholder="0"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              搬家费（元）
+            </label>
+            <input
+              type="number"
+              name="movingFee"
+              value={formData.movingFee || ""}
+              onChange={handleChange}
+              placeholder="0"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              月通勤费（元）
+            </label>
+            <input
+              type="number"
+              name="commuteCostMonthly"
+              value={formData.commuteCostMonthly || ""}
+              onChange={handleChange}
+              placeholder="0"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              水电网月均（元）
+            </label>
+            <input
+              type="number"
+              name="utilityEstimate"
+              value={formData.utilityEstimate || ""}
+              onChange={handleChange}
+              placeholder="200"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               面积（㎡）
             </label>
             <input
@@ -244,6 +327,81 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
                   {opt.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="col-span-2 mt-2">
+            <div className="text-sm font-medium text-gray-700 mb-3">看房记录</div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">看房日期</label>
+                <input
+                  type="date"
+                  name="viewingDate"
+                  value={formData.viewingDate}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">联系人</label>
+                <input
+                  type="text"
+                  name="contactName"
+                  value={formData.contactName}
+                  onChange={handleChange}
+                  placeholder="房东/中介姓名"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white text-sm"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-500 mb-1.5">联系电话</label>
+                <input
+                  type="tel"
+                  name="contactPhone"
+                  value={formData.contactPhone}
+                  onChange={handleChange}
+                  placeholder="138 xxxx xxxx"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white text-sm"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs text-gray-500 mb-1.5">看房结论</label>
+                <textarea
+                  name="viewingNotes"
+                  value={formData.viewingNotes}
+                  onChange={handleChange}
+                  placeholder="看完房子后的直观感受、和中介/房东聊了什么..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white text-sm resize-none"
+                />
+              </div>
+              {formData.status === "shortlisted" && (
+                <div className="col-span-2">
+                  <label className="block text-xs text-gray-500 mb-1.5">入选理由</label>
+                  <textarea
+                    name="shortlistReason"
+                    value={formData.shortlistReason}
+                    onChange={handleChange}
+                    placeholder="为什么把这套列入重点考虑？"
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white text-sm resize-none"
+                  />
+                </div>
+              )}
+              {formData.status === "eliminated" && (
+                <div className="col-span-2">
+                  <label className="block text-xs text-gray-500 mb-1.5">淘汰原因</label>
+                  <textarea
+                    name="eliminateReason"
+                    value={formData.eliminateReason}
+                    onChange={handleChange}
+                    placeholder="为什么不再考虑这套？"
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white text-sm resize-none"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

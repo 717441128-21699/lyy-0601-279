@@ -17,6 +17,12 @@ interface RatingBreakdown {
   comfort: number;
 }
 
+interface CostBreakdown {
+  firstMonthCash: number;
+  monthlyRealCost: number;
+  agencyFeeMonthly: number;
+}
+
 interface HouseStore {
   houses: House[];
   selectedHouseId: string | null;
@@ -51,6 +57,7 @@ interface HouseStore {
   getCandidateHouses: () => House[];
   getTotalRating: (house: House) => number;
   getRatingBreakdown: (house: House) => RatingBreakdown;
+  getCostBreakdown: (house: House) => CostBreakdown;
   hasActiveFilters: () => boolean;
 }
 
@@ -67,6 +74,30 @@ const levelToValue = (level: string): number => {
   return map[level] || 3;
 };
 
+const DEFAULT_HOUSE_PATCH: Partial<House> = {
+  agencyFee: 0,
+  movingFee: 0,
+  commuteCostMonthly: 0,
+  utilityEstimate: 0,
+  viewingDate: "",
+  contactName: "",
+  contactPhone: "",
+  viewingNotes: "",
+  eliminateReason: "",
+  shortlistReason: "",
+};
+
+const normalizeHouse = (h: Partial<House>): House => ({
+  ...(DEFAULT_HOUSE_PATCH as House),
+  ...h,
+  id: h.id || generateId(),
+  status: h.status || "pending",
+  createdAt: h.createdAt || new Date().toISOString(),
+  updatedAt: h.updatedAt || new Date().toISOString(),
+  ratings: h.ratings || { safety: 3, valueForMoney: 3, convenience: 3, comfort: 3 },
+  mapNotes: h.mapNotes || [],
+});
+
 export const useHouseStore = create<HouseStore>()(
   persist(
     (set, get) => ({
@@ -80,13 +111,12 @@ export const useHouseStore = create<HouseStore>()(
 
       addHouse: (houseData) => {
         const now = new Date().toISOString();
-        const newHouse: House = {
+        const newHouse: House = normalizeHouse({
           ...houseData,
           id: generateId(),
-          status: houseData.status || "pending",
           createdAt: now,
           updatedAt: now,
-        };
+        });
         set((state) => ({
           houses: [...state.houses, newHouse],
           selectedHouseId: state.selectedHouseId || newHouse.id,
@@ -185,20 +215,7 @@ export const useHouseStore = create<HouseStore>()(
           if (!data.houses || !Array.isArray(data.houses)) {
             return false;
           }
-          const validHouses = data.houses.map((h) => ({
-            ...h,
-            id: h.id || generateId(),
-            createdAt: h.createdAt || new Date().toISOString(),
-            updatedAt: h.updatedAt || new Date().toISOString(),
-            ratings: h.ratings || {
-              safety: 3,
-              valueForMoney: 3,
-              convenience: 3,
-              comfort: 3,
-            },
-            mapNotes: h.mapNotes || [],
-            status: h.status || "pending",
-          }));
+          const validHouses = data.houses.map((h) => normalizeHouse(h));
           const patch: Partial<HouseStore> = {
             houses: validHouses,
           };
@@ -224,7 +241,7 @@ export const useHouseStore = create<HouseStore>()(
       exportData: () => {
         const { houses, weights, filters, filterPresets } = get();
         const data = {
-          version: 2,
+          version: 3,
           exportedAt: new Date().toISOString(),
           houses,
           weights,
@@ -270,6 +287,22 @@ export const useHouseStore = create<HouseStore>()(
         };
       },
 
+      getCostBreakdown: (house) => {
+        const rent = house.rent || 0;
+        const deposit = house.deposit || 0;
+        const agencyFee = house.agencyFee || 0;
+        const movingFee = house.movingFee || 0;
+        const commuteCost = house.commuteCostMonthly || 0;
+        const utility = house.utilityEstimate || 0;
+
+        const firstMonthCash = rent + deposit + agencyFee + movingFee;
+        const agencyFeeMonthly = agencyFee / 12;
+        const monthlyRealCost =
+          rent + deposit / 12 + agencyFeeMonthly + commuteCost + utility;
+
+        return { firstMonthCash, monthlyRealCost, agencyFeeMonthly };
+      },
+
       hasActiveFilters: () => {
         const f = get().filters;
         return (
@@ -285,32 +318,31 @@ export const useHouseStore = create<HouseStore>()(
       getFilteredHouses: () => {
         const { houses, filters } = get();
         return houses.filter((house) => {
-          if (filters.rentMin !== null && house.rent < filters.rentMin)
+          const h = normalizeHouse(house);
+          if (filters.rentMin !== null && h.rent < filters.rentMin) return false;
+          if (filters.rentMax !== null && h.rent > filters.rentMax) return false;
+          if (filters.commuteMax !== null && h.commuteTime > filters.commuteMax)
             return false;
-          if (filters.rentMax !== null && house.rent > filters.rentMax)
-            return false;
-          if (filters.commuteMax !== null && house.commuteTime > filters.commuteMax)
-            return false;
-          if (filters.roomType && house.roomType !== filters.roomType)
-            return false;
+          if (filters.roomType && h.roomType !== filters.roomType) return false;
           if (filters.moveInDateBefore) {
-            if (!house.moveInDate) return false;
-            if (new Date(house.moveInDate) > new Date(filters.moveInDateBefore))
+            if (!h.moveInDate) return false;
+            if (new Date(h.moveInDate) > new Date(filters.moveInDateBefore))
               return false;
           }
-          if (filters.status && house.status !== filters.status) return false;
+          if (filters.status && h.status !== filters.status) return false;
           return true;
         });
       },
 
       getSortedHouses: () => {
-        const { sortField, sortOrder, getFilteredHouses, getTotalRating } = get();
+        const { sortField, sortOrder, getFilteredHouses, getTotalRating, getCostBreakdown } =
+          get();
         const sorted = [...getFilteredHouses()];
 
         const getValue = (house: House): number => {
           switch (sortField) {
             case "totalCost":
-              return house.rent + house.deposit / 12;
+              return getCostBreakdown(house).monthlyRealCost;
             case "commuteTime":
               return house.commuteTime;
             case "lighting":
@@ -346,6 +378,16 @@ export const useHouseStore = create<HouseStore>()(
     }),
     {
       name: "rental-compare-data",
+      version: 3,
+      migrate: (persistedState: any, version) => {
+        if (!persistedState || !persistedState.houses) return persistedState;
+        const state = persistedState as HouseStore;
+        state.houses = state.houses.map((h) => normalizeHouse(h));
+        if (!state.weights) state.weights = DEFAULT_WEIGHTS;
+        if (!state.filters) state.filters = DEFAULT_FILTERS;
+        if (!state.filterPresets) state.filterPresets = [];
+        return state;
+      },
     }
   )
 );

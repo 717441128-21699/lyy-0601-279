@@ -7,6 +7,8 @@ import RatingCard from "@/components/RatingCard";
 import ExportPanel from "@/components/ExportPanel";
 import DataManager from "@/components/DataManager";
 import FilterPresets from "@/components/FilterPresets";
+import ViewingSchedule from "@/components/ViewingSchedule";
+import FocusCompare from "@/components/FocusCompare";
 import { Home as HomeIcon, Sparkles } from "lucide-react";
 
 export default function Home() {
@@ -73,7 +75,9 @@ export default function Home() {
             <ExportPanel />
           </div>
 
-          <div className="col-span-12 lg:col-span-3">
+          <div className="col-span-12 lg:col-span-3 space-y-6">
+            <ViewingSchedule />
+            <FocusCompare />
             <MapNotes />
           </div>
         </div>

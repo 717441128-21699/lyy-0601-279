@@ -56,6 +56,10 @@ export interface House {
   address: string;
   rent: number;
   deposit: number;
+  agencyFee: number;
+  movingFee: number;
+  commuteCostMonthly: number;
+  utilityEstimate: number;
   area: number;
   roomType: string;
   commuteTime: number;
@@ -68,6 +72,12 @@ export interface House {
   mapNotes: MapNote[];
   ratings: Ratings;
   status: HouseStatus;
+  viewingDate: string;
+  contactName: string;
+  contactPhone: string;
+  viewingNotes: string;
+  eliminateReason: string;
+  shortlistReason: string;
   createdAt: string;
   updatedAt: string;
 }

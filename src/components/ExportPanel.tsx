@@ -56,6 +56,7 @@ export default function ExportPanel() {
     getCandidateHouses,
     getTotalRating,
     getRatingBreakdown,
+    getCostBreakdown,
     hasActiveFilters,
     weights,
   } = useHouseStore();
@@ -177,7 +178,7 @@ export default function ExportPanel() {
     topHouses.forEach((house, index) => {
       const rating = getTotalRating(house);
       const breakdown = getRatingBreakdown(house);
-      const totalCost = house.rent + house.deposit / 12;
+      const cost = getCostBreakdown(house);
       const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
 
       text += `${medals[index]} 第${index + 1}名：${house.name || "未命名"}\n`;
@@ -193,14 +194,33 @@ export default function ExportPanel() {
         });
       }
 
-      text += `   月均成本：¥${Math.round(totalCost).toLocaleString()}\n`;
-      text += `   通勤时间：${house.commuteTime || 0}分钟\n`;
-      text += `   面积房型：${house.area || 0}㎡ · ${house.roomType || "未填写"}\n`;
-      text += `   看房状态：${STATUS_LABEL[house.status] || "待联系"}\n`;
-      text += `   详细地址：${house.address || "未填写"}\n`;
+      text += `   💸 月均真实成本：¥${Math.round(cost.monthlyRealCost).toLocaleString()}\n`;
+      text += `      （月租¥${house.rent?.toLocaleString() || 0} + 押金月均¥${Math.round(house.deposit / 12).toLocaleString()} + 通勤¥${house.commuteCostMonthly || 0} + 水电网¥${house.utilityEstimate || 0}）\n`;
+      text += `   💰 首月现金压力：¥${Math.round(cost.firstMonthCash).toLocaleString()}\n`;
+      text += `      （月租+押金+中介费¥${house.agencyFee || 0}+搬家费¥${house.movingFee || 0}）\n`;
+      text += `   🚇 通勤时间：${house.commuteTime || 0}分钟\n`;
+      text += `   🏠 面积房型：${house.area || 0}㎡ · ${house.roomType || "未填写"}\n`;
+      text += `   📋 看房状态：${STATUS_LABEL[house.status] || "待联系"}\n`;
+      text += `   📍 详细地址：${house.address || "未填写"}\n`;
+
+      if (house.viewingDate) {
+        text += `   📅 看房日期：${house.viewingDate}\n`;
+      }
+      if (house.contactName || house.contactPhone) {
+        text += `   📞 联系人：${house.contactName || "-"} ${house.contactPhone || ""}\n`;
+      }
+      if (house.viewingNotes) {
+        text += `   📝 看房结论：${house.viewingNotes}\n`;
+      }
+      if (house.status === "shortlisted" && house.shortlistReason) {
+        text += `   ✨ 入选理由：${house.shortlistReason}\n`;
+      }
+      if (house.status === "eliminated" && house.eliminateReason) {
+        text += `   ❌ 淘汰原因：${house.eliminateReason}\n`;
+      }
 
       if (house.mapNotes && house.mapNotes.length > 0) {
-        text += `   周边设施：${house.mapNotes.map((n) => n.name).join("、")}\n`;
+        text += `   🏪 周边设施：${house.mapNotes.map((n) => n.name).join("、")}\n`;
       }
 
       text += `   优势亮点：___________\n`;
