@@ -17,7 +17,7 @@ const SORT_COLUMNS: {
   label: string;
   tooltip?: string;
 }[] = [
-  { field: "totalCost", label: "月均成本", tooltip: "租金 + 押金/12" },
+  { field: "totalCost", label: "真实月成本", tooltip: "含押金/中介费/搬家费按月均摊" },
   { field: "commuteTime", label: "通勤时间" },
   { field: "lighting", label: "采光" },
   { field: "noise", label: "噪音" },
@@ -57,6 +57,7 @@ export default function CompareTable() {
     sortOrder,
     toggleSort,
     getTotalRating,
+    getCostBreakdown,
     filters,
     setFilters,
     resetFilters,
@@ -68,12 +69,11 @@ export default function CompareTable() {
   const filteredCount = getFilteredHouses().length;
   const totalCount = houses.length;
 
-  const getCostColor = (rent: number) => {
-    const allRents = sortedHouses.map((h) => h.rent + h.deposit / 12);
-    if (allRents.length === 0) return "text-gray-700";
-    const min = Math.min(...allRents);
-    const max = Math.max(...allRents);
-    const cost = rent;
+  const getCostColor = (cost: number) => {
+    const allCosts = sortedHouses.map((h) => getCostBreakdown(h).monthlyRealCost);
+    if (allCosts.length === 0) return "text-gray-700";
+    const min = Math.min(...allCosts);
+    const max = Math.max(...allCosts);
     if (cost <= min) return "text-green-600 font-semibold";
     if (cost >= max) return "text-red-500";
     return "text-gray-700";
@@ -292,7 +292,7 @@ export default function CompareTable() {
             </thead>
             <tbody>
               {sortedHouses.map((house, index) => {
-                const totalCost = house.rent + house.deposit / 12;
+                const cost = getCostBreakdown(house);
                 const rating = getTotalRating(house);
                 const isSelected = selectedHouseId === house.id;
                 const badge = STATUS_BADGE[house.status] || STATUS_BADGE.pending;
@@ -336,8 +336,8 @@ export default function CompareTable() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`text-sm ${getCostColor(totalCost)}`}>
-                        ¥{Math.round(totalCost).toLocaleString()}
+                      <span className={`text-sm ${getCostColor(cost.monthlyRealCost)}`}>
+                        ¥{Math.round(cost.monthlyRealCost).toLocaleString()}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">

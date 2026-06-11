@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useHouseStore } from "@/store/useHouseStore";
 import { HOUSE_STATUS_OPTIONS } from "@/types";
 import type { House, HouseStatus } from "@/types";
-import { Copy, Check, FileText, ClipboardList, Trophy } from "lucide-react";
+import { Copy, Check, FileText, ClipboardList, Trophy, FileCheck } from "lucide-react";
 
-type TabType = "viewing" | "questions" | "candidates";
+type TabType = "viewing" | "questions" | "candidates" | "contract";
 
 const STATUS_LABEL: Record<HouseStatus, string> = {
   pending: "待联系",
@@ -102,10 +102,19 @@ export default function ExportPanel() {
         text += `  ${index + 1}. ${house.name || "未命名房源"}\n`;
         text += `     📍 ${house.address || "未填写"}\n`;
         text += `     💰 ¥${house.rent?.toLocaleString() || 0}/月 · 📐 ${house.area || 0}㎡ · 🛏️ ${house.roomType || "未填写"}\n`;
-        text += `     🚇 通勤${house.commuteTime || 0}分钟 ·  入住${house.moveInDate || "未填写"}\n`;
+        text += `     🚇 通勤${house.commuteTime || 0}分钟 · 入住${house.moveInDate || "未填写"}\n`;
         text += `     ⭐ ${rating.toFixed(1)}分\n`;
-        text += `     📝 预约时间：___________\n`;
-        text += `     📞 联系方式：___________\n`;
+        if (house.viewingDate) {
+          const timeStr = house.viewingTime ? ` ${house.viewingTime}` : "";
+          text += `     📅 看房时间：${house.viewingDate}${timeStr}\n`;
+        } else {
+          text += `     � 看房时间：___________\n`;
+        }
+        if (house.contactName || house.contactPhone) {
+          text += `     📞 联系人：${house.contactName || "-"} ${house.contactPhone || ""}\n`;
+        } else {
+          text += `     📞 联系方式：___________\n`;
+        }
       });
 
       text += "\n";
@@ -195,7 +204,8 @@ export default function ExportPanel() {
       }
 
       text += `   💸 月均真实成本：¥${Math.round(cost.monthlyRealCost).toLocaleString()}\n`;
-      text += `      （月租¥${house.rent?.toLocaleString() || 0} + 押金月均¥${Math.round(house.deposit / 12).toLocaleString()} + 通勤¥${house.commuteCostMonthly || 0} + 水电网¥${house.utilityEstimate || 0}）\n`;
+      text += `      （月租¥${house.rent?.toLocaleString() || 0} + 押金月均¥${Math.round(cost.depositMonthly).toLocaleString()} + 中介费月均¥${Math.round(cost.agencyFeeMonthly).toLocaleString()} + 搬家费月均¥${Math.round(cost.movingFeeMonthly).toLocaleString()} + 通勤¥${house.commuteCostMonthly || 0} + 水电网¥${house.utilityEstimate || 0}${cost.propertyFeeMonthly ? ` + 物业¥${cost.propertyFeeMonthly}` : ""}${cost.internetFeeMonthly ? ` + 网费¥${cost.internetFeeMonthly}` : ""}）\n`;
+      text += `      （按${cost.leaseTermMonths}个月租期均摊一次性费用）\n`;
       text += `   💰 首月现金压力：¥${Math.round(cost.firstMonthCash).toLocaleString()}\n`;
       text += `      （月租+押金+中介费¥${house.agencyFee || 0}+搬家费¥${house.movingFee || 0}）\n`;
       text += `   🚇 通勤时间：${house.commuteTime || 0}分钟\n`;
@@ -211,6 +221,15 @@ export default function ExportPanel() {
       }
       if (house.viewingNotes) {
         text += `   📝 看房结论：${house.viewingNotes}\n`;
+      }
+      if (house.reviewNotes) {
+        text += `   💭 复盘感受：${house.reviewNotes}\n`;
+      }
+      if (house.onSiteDeductions) {
+        text += `   ⚠️ 临场扣分：${house.onSiteDeductions}\n`;
+      }
+      if (house.photoNotes) {
+        text += `   📷 照片备注：${house.photoNotes}\n`;
       }
       if (house.status === "shortlisted" && house.shortlistReason) {
         text += `   ✨ 入选理由：${house.shortlistReason}\n`;
@@ -237,6 +256,68 @@ export default function ExportPanel() {
     return text;
   };
 
+  const generateContractChecklist = (): string => {
+    const exportHouses = hasActiveFilters() ? filteredHouses : houses;
+    if (exportHouses.length === 0) return "暂无房源信息";
+
+    let text = "📝 签约前核对清单\n";
+    text += "=".repeat(30) + "\n";
+    if (hasActiveFilters()) {
+      text += `（已应用筛选条件，共${exportHouses.length}套）\n`;
+    }
+    text += "\n";
+    text += "⚠️ 签合同前务必逐项核对，避免冲动定房\n\n";
+
+    exportHouses.forEach((house, idx) => {
+      const rentLabel = house.rent ? "（¥" + house.rent.toLocaleString() + "/月）" : "";
+      const leaseLabel = house.leaseTermMonths ? house.leaseTermMonths + "个月" : "___________";
+      const rentStr = house.rent ? "¥" + house.rent.toLocaleString() : "___________";
+      const depositStr = house.deposit ? "¥" + house.deposit.toLocaleString() : "___________";
+      const agencyFeeStr = house.agencyFee ? "¥" + house.agencyFee + "（已确认）" : "___________";
+
+      text += "【" + (idx + 1) + ". " + (house.name || "未命名房源") + "】" + rentLabel + "\n";
+      text += "-".repeat(20) + "\n";
+      text += "  📍 地址：" + (house.address || "未填写") + "\n\n";
+
+      text += "  □ 合同期限：" + (house.contractTerm || "___________") + "\n";
+      text += "  □ 付款方式：" + (house.paymentMethod || "___________") + "\n";
+      text += "  □ 租期：" + leaseLabel + "\n";
+      text += "  □ 月租金：" + rentStr + "\n";
+      text += "  □ 押金：" + depositStr + "\n";
+      text += "  □ 中介费：" + agencyFeeStr + "\n";
+      text += "  □ 物业费：¥" + (house.propertyFee || 0) + "/月\n";
+      text += "  □ 网费：¥" + (house.internetFee || 0) + "/月\n";
+      text += "  □ 水电类型：" + (house.utilityType || "___________") + "\n";
+      text += "  □ 水电网月均预估：¥" + (house.utilityEstimate || 0) + "\n";
+      text += "  □ 维修责任：" + (house.maintenanceResponsibility || "___________") + "\n";
+      text += "  □ 转租规则：" + (house.subletRule || "___________") + "\n";
+      text += "  □ 可入住日期：" + (house.moveInDate || "___________") + "\n";
+      text += "  □ 联系人：" + (house.contactName || "-") + " " + (house.contactPhone || "") + "\n";
+
+      if (house.reviewNotes) {
+        text += "\n  💭 看房复盘：" + house.reviewNotes + "\n";
+      }
+      if (house.onSiteDeductions) {
+        text += "  ⚠️ 临场扣分：" + house.onSiteDeductions + "\n";
+      }
+
+      text += "\n";
+    });
+
+    text += "\n📋 签合同必问：\n";
+    text += "  □ 押金退还条件和时间\n";
+    text += "  □ 提前退租的违约金\n";
+    text += "  □ 续租是否涨租\n";
+    text += "  □ 房屋内设施损坏谁负责修\n";
+    text += "  □ 能不能养宠物/吸烟/做饭\n";
+    text += "  □ 有没有隐藏费用（卫生费、管理费等）\n";
+    text += "  □ 发票/收据怎么开\n";
+    text += "  □ 房东/中介的联系方式是否为业主本人\n";
+    text += "  □ 房产证/委托书是否齐全\n";
+
+    return text;
+  };
+
   const getContent = () => {
     switch (activeTab) {
       case "viewing":
@@ -245,6 +326,8 @@ export default function ExportPanel() {
         return generateQuestionList();
       case "candidates":
         return generateCandidateList();
+      case "contract":
+        return generateContractChecklist();
       default:
         return "";
     }
@@ -265,6 +348,7 @@ export default function ExportPanel() {
     { key: "viewing", label: "看房清单", icon: FileText },
     { key: "questions", label: "问题清单", icon: ClipboardList },
     { key: "candidates", label: "候选列表", icon: Trophy },
+    { key: "contract", label: "签约核对", icon: FileCheck },
   ];
 
   return (
@@ -278,6 +362,8 @@ export default function ExportPanel() {
             <p className="text-sm text-gray-500 mt-0.5">
               {activeTab === "candidates"
                 ? "候选列表始终按综合评分排序，含决策解释"
+                : activeTab === "contract"
+                ? "签约前逐项核对，避免冲动定房"
                 : hasActiveFilters() && activeTab === "viewing"
                 ? "已应用当前筛选条件，按状态分组"
                 : "一键复制，粘贴到备忘录或微信"}

@@ -21,6 +21,11 @@ interface CostBreakdown {
   firstMonthCash: number;
   monthlyRealCost: number;
   agencyFeeMonthly: number;
+  movingFeeMonthly: number;
+  depositMonthly: number;
+  propertyFeeMonthly: number;
+  internetFeeMonthly: number;
+  leaseTermMonths: number;
 }
 
 interface HouseStore {
@@ -80,11 +85,23 @@ const DEFAULT_HOUSE_PATCH: Partial<House> = {
   commuteCostMonthly: 0,
   utilityEstimate: 0,
   viewingDate: "",
+  viewingTime: "",
   contactName: "",
   contactPhone: "",
   viewingNotes: "",
   eliminateReason: "",
   shortlistReason: "",
+  leaseTermMonths: 12,
+  contractTerm: "",
+  paymentMethod: "",
+  propertyFee: 0,
+  internetFee: 0,
+  utilityType: "",
+  maintenanceResponsibility: "",
+  subletRule: "",
+  reviewNotes: "",
+  photoNotes: "",
+  onSiteDeductions: "",
 };
 
 const normalizeHouse = (h: Partial<House>): House => ({
@@ -241,7 +258,7 @@ export const useHouseStore = create<HouseStore>()(
       exportData: () => {
         const { houses, weights, filters, filterPresets } = get();
         const data = {
-          version: 3,
+          version: 4,
           exportedAt: new Date().toISOString(),
           houses,
           weights,
@@ -294,13 +311,36 @@ export const useHouseStore = create<HouseStore>()(
         const movingFee = house.movingFee || 0;
         const commuteCost = house.commuteCostMonthly || 0;
         const utility = house.utilityEstimate || 0;
+        const propertyFee = house.propertyFee || 0;
+        const internetFee = house.internetFee || 0;
+        const leaseTerm = house.leaseTermMonths && house.leaseTermMonths > 0
+          ? house.leaseTermMonths
+          : 12;
 
         const firstMonthCash = rent + deposit + agencyFee + movingFee;
-        const agencyFeeMonthly = agencyFee / 12;
+        const depositMonthly = deposit / leaseTerm;
+        const agencyFeeMonthly = agencyFee / leaseTerm;
+        const movingFeeMonthly = movingFee / leaseTerm;
         const monthlyRealCost =
-          rent + deposit / 12 + agencyFeeMonthly + commuteCost + utility;
+          rent +
+          depositMonthly +
+          agencyFeeMonthly +
+          movingFeeMonthly +
+          commuteCost +
+          utility +
+          propertyFee +
+          internetFee;
 
-        return { firstMonthCash, monthlyRealCost, agencyFeeMonthly };
+        return {
+          firstMonthCash,
+          monthlyRealCost,
+          agencyFeeMonthly,
+          movingFeeMonthly,
+          depositMonthly,
+          propertyFeeMonthly: propertyFee,
+          internetFeeMonthly: internetFee,
+          leaseTermMonths: leaseTerm,
+        };
       },
 
       hasActiveFilters: () => {
@@ -378,7 +418,7 @@ export const useHouseStore = create<HouseStore>()(
     }),
     {
       name: "rental-compare-data",
-      version: 3,
+      version: 4,
       migrate: (persistedState: any, version) => {
         if (!persistedState || !persistedState.houses) return persistedState;
         const state = persistedState as HouseStore;

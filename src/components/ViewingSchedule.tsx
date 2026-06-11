@@ -29,12 +29,16 @@ export default function ViewingSchedule() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const sortByDate = (a: House, b: House) => {
-    const dA = a.viewingDate ? new Date(a.viewingDate).getTime() : Infinity;
-    const dB = b.viewingDate ? new Date(b.viewingDate).getTime() : Infinity;
+    const dA = a.viewingDate
+      ? new Date(`${a.viewingDate} ${a.viewingTime || "00:00"}`).getTime()
+      : Infinity;
+    const dB = b.viewingDate
+      ? new Date(`${b.viewingDate} ${b.viewingTime || "00:00"}`).getTime()
+      : Infinity;
     return dA - dB;
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDateTime = (dateStr: string, timeStr: string) => {
     if (!dateStr) return "未安排";
     const d = new Date(dateStr);
     const today = new Date();
@@ -44,10 +48,13 @@ export default function ViewingSchedule() {
     const diffDays = Math.round((dateOnly.getTime() - today.getTime()) / 86400000);
     const weekday = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][d.getDay()];
     const dateText = `${d.getMonth() + 1}月${d.getDate()}日 ${weekday}`;
-    if (diffDays === 0) return `${dateText}（今天）`;
-    if (diffDays === 1) return `${dateText}（明天）`;
-    if (diffDays < 0) return `${dateText}（已过）`;
-    return `${dateText}（${diffDays}天后）`;
+    let prefix = "";
+    if (diffDays === 0) prefix = "今天 · ";
+    else if (diffDays === 1) prefix = "明天 · ";
+    else if (diffDays < 0) prefix = "已过 · ";
+    else prefix = `${diffDays}天后 · `;
+    const timeText = timeStr ? ` ${timeStr}` : "";
+    return `${prefix}${dateText}${timeText}`;
   };
 
   const toggleExpand = (id: string) => {
@@ -98,8 +105,8 @@ export default function ViewingSchedule() {
                 {house.name || "未命名"}
               </span>
             </div>
-            <span className="text-xs text-gray-500 shrink-0">
-              {formatDate(house.viewingDate)}
+            <span className="text-xs text-gray-500 shrink-0 text-right">
+              {formatDateTime(house.viewingDate, house.viewingTime || "")}
             </span>
             {isExpanded ? (
               <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />
@@ -140,17 +147,31 @@ export default function ViewingSchedule() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1 text-xs">
-              <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-              <input
-                type="date"
-                value={house.viewingDate || ""}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) =>
-                  updateHouse(house.id, { viewingDate: e.target.value })
-                }
-                className="flex-1 px-2 py-1 rounded-md bg-warm-50 border border-transparent focus:border-primary-300 focus:bg-white outline-none text-xs"
-              />
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
+                <input
+                  type="date"
+                  value={house.viewingDate || ""}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    updateHouse(house.id, { viewingDate: e.target.value })
+                  }
+                  className="flex-1 px-2 py-1 rounded-md bg-warm-50 border border-transparent focus:border-purple-300 focus:bg-white outline-none text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-gray-400 shrink-0" />
+                <input
+                  type="time"
+                  value={house.viewingTime || ""}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    updateHouse(house.id, { viewingTime: e.target.value })
+                  }
+                  className="flex-1 px-2 py-1 rounded-md bg-warm-50 border border-transparent focus:border-purple-300 focus:bg-white outline-none text-xs"
+                />
+              </div>
             </div>
 
             <textarea

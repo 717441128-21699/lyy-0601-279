@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  MessageCircle,
+  AlertCircle,
 } from "lucide-react";
 
 type CompareDim = "monthlyRealCost" | "commute" | "risk" | "comfort";
@@ -177,6 +179,16 @@ export default function FocusCompare() {
         text += `  你选中 ${top.name} 的理由：${top.shortlistReason}\n`;
       }
     }
+    text += "\n";
+    text += "💭 看房复盘\n";
+    list.forEach((h) => {
+      if (h.reviewNotes) {
+        text += `  · ${h.name}：${h.reviewNotes}\n`;
+      }
+      if (h.onSiteDeductions) {
+        text += `    ⚠️ 扣分点：${h.onSiteDeductions}\n`;
+      }
+    });
     text += "\n💡 建议：";
     const cheap = getBestWorst("monthlyRealCost").best;
     const fast = getBestWorst("commute").best;
@@ -345,6 +357,40 @@ export default function FocusCompare() {
               </div>
             );
           })}
+
+          {list.some((h) => h.reviewNotes || h.onSiteDeductions) && (
+            <div className="rounded-xl bg-amber-50 p-3 mt-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <MessageCircle className="w-3.5 h-3.5 text-amber-600" />
+                <span className="text-xs font-semibold text-amber-700">
+                  看房复盘
+                </span>
+              </div>
+              <div className="space-y-2">
+                {list.map((h) => {
+                  if (!h.reviewNotes && !h.onSiteDeductions) return null;
+                  return (
+                    <div key={h.id} className="bg-white/80 rounded-lg p-2">
+                      <div className="text-[11px] font-medium text-gray-700 mb-1">
+                        {h.name}
+                      </div>
+                      {h.reviewNotes && (
+                        <p className="text-[11px] text-gray-600 leading-relaxed">
+                          💭 {h.reviewNotes}
+                        </p>
+                      )}
+                      {h.onSiteDeductions && (
+                        <p className="text-[11px] text-red-600 leading-relaxed mt-1 flex items-start gap-1">
+                          <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                          <span>{h.onSiteDeductions}</span>
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -73,11 +73,23 @@ export interface House {
   ratings: Ratings;
   status: HouseStatus;
   viewingDate: string;
+  viewingTime: string;
   contactName: string;
   contactPhone: string;
   viewingNotes: string;
   eliminateReason: string;
   shortlistReason: string;
+  leaseTermMonths: number;
+  contractTerm: string;
+  paymentMethod: string;
+  propertyFee: number;
+  internetFee: number;
+  utilityType: string;
+  maintenanceResponsibility: string;
+  subletRule: string;
+  reviewNotes: string;
+  photoNotes: string;
+  onSiteDeductions: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -158,4 +170,31 @@ export const HOUSE_STATUS_OPTIONS: {
   { value: "viewed", label: "已看房", color: "text-accent-600", bgColor: "bg-accent-100" },
   { value: "eliminated", label: "已淘汰", color: "text-red-600", bgColor: "bg-red-100" },
   { value: "shortlisted", label: "重点考虑", color: "text-green-600", bgColor: "bg-green-100" },
+];
+
+export const PAYMENT_METHOD_OPTIONS = [
+  "押一付一",
+  "押一付三",
+  "押一付六",
+  "押一付十二",
+  "押二付一",
+  "押二付三",
+  "半年付",
+  "年付",
+];
+
+export const UTILITY_TYPE_OPTIONS = [
+  "民水民电",
+  "商水商电",
+  "民水商电",
+  "商水民电",
+  "混合计费",
+];
+
+export const LEASE_TERM_OPTIONS = [
+  { value: 3, label: "3个月" },
+  { value: 6, label: "6个月" },
+  { value: 12, label: "1年" },
+  { value: 24, label: "2年" },
+  { value: 36, label: "3年" },
 ];
