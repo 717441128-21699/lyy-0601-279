@@ -1,8 +1,28 @@
 import { useState } from "react";
 import { useHouseStore } from "@/store/useHouseStore";
+import { HOUSE_STATUS_OPTIONS } from "@/types";
+import type { House, HouseStatus } from "@/types";
 import { Copy, Check, FileText, ClipboardList, Trophy } from "lucide-react";
 
 type TabType = "viewing" | "questions" | "candidates";
+
+const STATUS_LABEL: Record<HouseStatus, string> = {
+  pending: "待联系",
+  contacted: "已联系",
+  scheduled: "已预约",
+  viewed: "已看房",
+  eliminated: "已淘汰",
+  shortlisted: "重点考虑",
+};
+
+const STATUS_ORDER: HouseStatus[] = [
+  "shortlisted",
+  "scheduled",
+  "viewed",
+  "contacted",
+  "pending",
+  "eliminated",
+];
 
 const QUESTIONS_TEMPLATE = [
   "租金是否包含物业费、网费？",
@@ -22,19 +42,39 @@ const QUESTIONS_TEMPLATE = [
   "有没有纱窗？蚊虫多不多？",
 ];
 
+const DIMENSION_LABELS: Record<string, string> = {
+  safety: "安全",
+  valueForMoney: "性价比",
+  convenience: "便利",
+  comfort: "舒适",
+};
+
 export default function ExportPanel() {
   const {
     houses,
     getFilteredHouses,
     getCandidateHouses,
     getTotalRating,
+    getRatingBreakdown,
     hasActiveFilters,
+    weights,
   } = useHouseStore();
   const [activeTab, setActiveTab] = useState<TabType>("viewing");
   const [copied, setCopied] = useState(false);
 
   const filteredHouses = getFilteredHouses();
   const candidateHouses = getCandidateHouses();
+
+  const groupByStatus = (list: House[]): Record<string, House[]> => {
+    const groups: Record<string, House[]> = {};
+    STATUS_ORDER.forEach((s) => {
+      const items = list.filter((h) => h.status === s);
+      if (items.length > 0) {
+        groups[s] = items;
+      }
+    });
+    return groups;
+  };
 
   const generateViewingList = (): string => {
     const exportHouses = hasActiveFilters() ? filteredHouses : houses;
@@ -47,24 +87,30 @@ export default function ExportPanel() {
     }
     text += "\n";
 
-    exportHouses.forEach((house, index) => {
-      const rating = getTotalRating(house);
-      text += `【第${index + 1}套】${house.name || "未命名房源"}\n`;
-      text += `  📍 地址：${house.address || "未填写"}\n`;
-      text += `  💰 租金：¥${house.rent?.toLocaleString() || 0}/月\n`;
-      text += `  📦 押金：¥${house.deposit?.toLocaleString() || 0}\n`;
-      text += `  📐 面积：${house.area || 0}㎡\n`;
-      text += `  🛏️ 房型：${house.roomType || "未填写"}\n`;
-      text += `  🚇 通勤：${house.commuteTime || 0}分钟\n`;
-      text += `  👥 室友：${house.roommates || "未填写"}\n`;
-      text += `  📅 入住：${house.moveInDate || "未填写"}\n`;
-      text += `  ⭐ 评分：${rating.toFixed(1)}分\n`;
-      text += `  📝 预约时间：___________\n`;
-      text += `  📞 联系方式：___________\n`;
+    const grouped = groupByStatus(exportHouses);
+
+    STATUS_ORDER.forEach((status) => {
+      const group = grouped[status];
+      if (!group) return;
+
+      text += `【${STATUS_LABEL[status]}】（${group.length}套）\n`;
+      text += "-".repeat(20) + "\n";
+
+      group.forEach((house, index) => {
+        const rating = getTotalRating(house);
+        text += `  ${index + 1}. ${house.name || "未命名房源"}\n`;
+        text += `     📍 ${house.address || "未填写"}\n`;
+        text += `     💰 ¥${house.rent?.toLocaleString() || 0}/月 · 📐 ${house.area || 0}㎡ · 🛏️ ${house.roomType || "未填写"}\n`;
+        text += `     🚇 通勤${house.commuteTime || 0}分钟 ·  入住${house.moveInDate || "未填写"}\n`;
+        text += `     ⭐ ${rating.toFixed(1)}分\n`;
+        text += `     📝 预约时间：___________\n`;
+        text += `     📞 联系方式：___________\n`;
+      });
+
       text += "\n";
     });
 
-    text += "\n💡 看房前准备：\n";
+    text += "💡 看房前准备：\n";
     text += "  □ 身份证\n";
     text += "  □ 卷尺（测量面积）\n";
     text += "  □ 手机（拍照、录音）\n";
@@ -113,24 +159,44 @@ export default function ExportPanel() {
     const topHouses = candidateHouses.slice(0, 5);
     if (topHouses.length === 0) return "暂无候选房源";
 
+    const totalWeight =
+      weights.safety + weights.valueForMoney + weights.convenience + weights.comfort;
+
     let text = "🏆 最终候选列表\n";
     text += "=".repeat(30) + "\n";
     text += `（按加权综合评分降序排列，共${topHouses.length}套）\n`;
     if (hasActiveFilters()) {
       text += `（已应用筛选条件）\n`;
     }
+    if (totalWeight > 0) {
+      const pct = (w: number) => Math.round((w / totalWeight) * 100);
+      text += `权重配置：安全${pct(weights.safety)}% / 性价比${pct(weights.valueForMoney)}% / 便利${pct(weights.convenience)}% / 舒适${pct(weights.comfort)}%\n`;
+    }
     text += "\n";
 
     topHouses.forEach((house, index) => {
       const rating = getTotalRating(house);
+      const breakdown = getRatingBreakdown(house);
       const totalCost = house.rent + house.deposit / 12;
       const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
 
       text += `${medals[index]} 第${index + 1}名：${house.name || "未命名"}\n`;
       text += `   综合评分：⭐ ${rating.toFixed(1)}分\n`;
+
+      if (totalWeight > 0) {
+        text += `   评分构成：\n`;
+        const entries = Object.entries(breakdown) as [string, number][];
+        const sorted = entries.sort((a, b) => b[1] - a[1]);
+        sorted.forEach(([key, value]) => {
+          const pct = totalWeight > 0 ? Math.round((value / rating) * 100) : 0;
+          text += `     · ${DIMENSION_LABELS[key] || key}：贡献 ${pct}%（${value.toFixed(2)}分）\n`;
+        });
+      }
+
       text += `   月均成本：¥${Math.round(totalCost).toLocaleString()}\n`;
       text += `   通勤时间：${house.commuteTime || 0}分钟\n`;
       text += `   面积房型：${house.area || 0}㎡ · ${house.roomType || "未填写"}\n`;
+      text += `   看房状态：${STATUS_LABEL[house.status] || "待联系"}\n`;
       text += `   详细地址：${house.address || "未填写"}\n`;
 
       if (house.mapNotes && house.mapNotes.length > 0) {
@@ -191,9 +257,9 @@ export default function ExportPanel() {
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">
               {activeTab === "candidates"
-                ? "候选列表始终按综合评分排序"
+                ? "候选列表始终按综合评分排序，含决策解释"
                 : hasActiveFilters() && activeTab === "viewing"
-                ? "已应用当前筛选条件"
+                ? "已应用当前筛选条件，按状态分组"
                 : "一键复制，粘贴到备忘录或微信"}
             </p>
           </div>

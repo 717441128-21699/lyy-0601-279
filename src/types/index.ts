@@ -27,12 +27,27 @@ export interface Weights {
   comfort: number;
 }
 
+export type HouseStatus =
+  | "pending"
+  | "contacted"
+  | "scheduled"
+  | "viewed"
+  | "eliminated"
+  | "shortlisted";
+
 export interface FilterConditions {
   rentMin: number | null;
   rentMax: number | null;
   commuteMax: number | null;
   roomType: string;
   moveInDateBefore: string;
+  status: HouseStatus | "";
+}
+
+export interface FilterPreset {
+  id: string;
+  name: string;
+  filters: FilterConditions;
 }
 
 export interface House {
@@ -52,6 +67,7 @@ export interface House {
   riskNotes: string;
   mapNotes: MapNote[];
   ratings: Ratings;
+  status: HouseStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -117,4 +133,19 @@ export const DEFAULT_FILTERS: FilterConditions = {
   commuteMax: null,
   roomType: "",
   moveInDateBefore: "",
+  status: "",
 };
+
+export const HOUSE_STATUS_OPTIONS: {
+  value: HouseStatus;
+  label: string;
+  color: string;
+  bgColor: string;
+}[] = [
+  { value: "pending", label: "待联系", color: "text-gray-600", bgColor: "bg-gray-100" },
+  { value: "contacted", label: "已联系", color: "text-blue-600", bgColor: "bg-blue-100" },
+  { value: "scheduled", label: "已预约", color: "text-purple-600", bgColor: "bg-purple-100" },
+  { value: "viewed", label: "已看房", color: "text-accent-600", bgColor: "bg-accent-100" },
+  { value: "eliminated", label: "已淘汰", color: "text-red-600", bgColor: "bg-red-100" },
+  { value: "shortlisted", label: "重点考虑", color: "text-green-600", bgColor: "bg-green-100" },
+];

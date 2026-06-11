@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useHouseStore } from "@/store/useHouseStore";
-import { ROOM_TYPE_OPTIONS, LEVEL_OPTIONS } from "@/types";
+import { ROOM_TYPE_OPTIONS, LEVEL_OPTIONS, HOUSE_STATUS_OPTIONS } from "@/types";
+import type { HouseStatus } from "@/types";
 import { Save, X } from "lucide-react";
 
 interface HouseFormProps {
@@ -27,6 +28,7 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
     noise: "一般",
     facilities: "一般",
     riskNotes: "一般",
+    status: "pending" as HouseStatus,
   });
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
         noise: existingHouse.noise || "一般",
         facilities: existingHouse.facilities || "一般",
         riskNotes: existingHouse.riskNotes || "一般",
+        status: existingHouse.status || "pending",
       });
     }
   }, [existingHouse]);
@@ -222,6 +225,26 @@ export default function HouseForm({ houseId, onClose }: HouseFormProps) {
               placeholder="例如：2位女生室友，安静爱干净"
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
             />
+          </div>
+
+          <div className="col-span-2 mt-2">
+            <div className="text-sm font-medium text-gray-700 mb-3">看房跟进状态</div>
+            <div className="flex flex-wrap gap-2">
+              {HOUSE_STATUS_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, status: opt.value }))}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    formData.status === opt.value
+                      ? `${opt.bgColor} ${opt.color} ring-2 ring-current ring-offset-1`
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="col-span-2 mt-2">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useHouseStore } from "@/store/useHouseStore";
-import type { SortField } from "@/types";
-import { ROOM_TYPE_OPTIONS } from "@/types";
+import type { SortField, HouseStatus } from "@/types";
+import { ROOM_TYPE_OPTIONS, HOUSE_STATUS_OPTIONS } from "@/types";
 import {
   ArrowUpDown,
   ArrowUp,
@@ -25,6 +25,15 @@ const SORT_COLUMNS: {
   { field: "riskNotes", label: "风险" },
   { field: "rating", label: "综合评分" },
 ];
+
+const STATUS_BADGE: Record<HouseStatus, { label: string; color: string; bgColor: string }> = {
+  pending: { label: "待联系", color: "text-gray-600", bgColor: "bg-gray-100" },
+  contacted: { label: "已联系", color: "text-blue-600", bgColor: "bg-blue-100" },
+  scheduled: { label: "已预约", color: "text-purple-600", bgColor: "bg-purple-100" },
+  viewed: { label: "已看房", color: "text-teal-600", bgColor: "bg-teal-100" },
+  eliminated: { label: "已淘汰", color: "text-red-600", bgColor: "bg-red-100" },
+  shortlisted: { label: "重点考虑", color: "text-green-600", bgColor: "bg-green-100" },
+};
 
 const levelColor = (level: string) => {
   const map: Record<string, string> = {
@@ -120,7 +129,7 @@ export default function CompareTable() {
 
       {showFilters && (
         <div className="px-6 py-4 border-b border-gray-100 bg-warm-50/30 animate-slide-up">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">
                 租金最低（元）
@@ -195,6 +204,25 @@ export default function CompareTable() {
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white"
               />
             </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1.5">
+                看房状态
+              </label>
+              <select
+                value={filters.status}
+                onChange={(e) =>
+                  handleFilterChange("status", e.target.value)
+                }
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-primary-400 focus:ring-2 focus:ring-primary-100 outline-none transition-all bg-white"
+              >
+                <option value="">不限</option>
+                {HOUSE_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="flex items-center justify-end mt-4">
             <button
@@ -236,6 +264,9 @@ export default function CompareTable() {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-600 sticky left-0 bg-gray-50/90 backdrop-blur z-10 min-w-[160px]">
                   房源
                 </th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-gray-600 min-w-[80px] whitespace-nowrap">
+                  状态
+                </th>
                 {SORT_COLUMNS.map((col) => (
                   <th
                     key={col.field}
@@ -264,6 +295,7 @@ export default function CompareTable() {
                 const totalCost = house.rent + house.deposit / 12;
                 const rating = getTotalRating(house);
                 const isSelected = selectedHouseId === house.id;
+                const badge = STATUS_BADGE[house.status] || STATUS_BADGE.pending;
 
                 return (
                   <tr
@@ -297,6 +329,11 @@ export default function CompareTable() {
                           </div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.bgColor} ${badge.color}`}>
+                        {badge.label}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`text-sm ${getCostColor(totalCost)}`}>

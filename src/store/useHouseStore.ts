@@ -6,8 +6,16 @@ import type {
   SortOrder,
   Weights,
   FilterConditions,
+  FilterPreset,
 } from "@/types";
 import { DEFAULT_WEIGHTS, DEFAULT_FILTERS } from "@/types";
+
+interface RatingBreakdown {
+  safety: number;
+  valueForMoney: number;
+  convenience: number;
+  comfort: number;
+}
 
 interface HouseStore {
   houses: House[];
@@ -16,6 +24,7 @@ interface HouseStore {
   sortOrder: SortOrder;
   weights: Weights;
   filters: FilterConditions;
+  filterPresets: FilterPreset[];
   addHouse: (house: Omit<House, "id" | "createdAt" | "updatedAt">) => void;
   updateHouse: (id: string, updates: Partial<House>) => void;
   deleteHouse: (id: string) => void;
@@ -27,12 +36,21 @@ interface HouseStore {
   resetWeights: () => void;
   setFilters: (filters: Partial<FilterConditions>) => void;
   resetFilters: () => void;
-  importData: (data: { houses: House[]; weights?: Weights }) => boolean;
+  addFilterPreset: (name: string) => void;
+  applyFilterPreset: (id: string) => void;
+  deleteFilterPreset: (id: string) => void;
+  importData: (data: {
+    houses: House[];
+    weights?: Weights;
+    filters?: FilterConditions;
+    filterPresets?: FilterPreset[];
+  }) => boolean;
   exportData: () => string;
   getFilteredHouses: () => House[];
   getSortedHouses: () => House[];
   getCandidateHouses: () => House[];
   getTotalRating: (house: House) => number;
+  getRatingBreakdown: (house: House) => RatingBreakdown;
   hasActiveFilters: () => boolean;
 }
 
@@ -58,12 +76,14 @@ export const useHouseStore = create<HouseStore>()(
       sortOrder: "asc",
       weights: DEFAULT_WEIGHTS,
       filters: DEFAULT_FILTERS,
+      filterPresets: [],
 
       addHouse: (houseData) => {
         const now = new Date().toISOString();
         const newHouse: House = {
           ...houseData,
           id: generateId(),
+          status: houseData.status || "pending",
           createdAt: now,
           updatedAt: now,
         };
@@ -136,6 +156,30 @@ export const useHouseStore = create<HouseStore>()(
 
       resetFilters: () => set({ filters: DEFAULT_FILTERS }),
 
+      addFilterPreset: (name) => {
+        const preset: FilterPreset = {
+          id: generateId(),
+          name,
+          filters: { ...get().filters },
+        };
+        set((state) => ({
+          filterPresets: [...state.filterPresets, preset],
+        }));
+      },
+
+      applyFilterPreset: (id) => {
+        const preset = get().filterPresets.find((p) => p.id === id);
+        if (preset) {
+          set({ filters: { ...preset.filters } });
+        }
+      },
+
+      deleteFilterPreset: (id) => {
+        set((state) => ({
+          filterPresets: state.filterPresets.filter((p) => p.id !== id),
+        }));
+      },
+
       importData: (data) => {
         try {
           if (!data.houses || !Array.isArray(data.houses)) {
@@ -153,12 +197,19 @@ export const useHouseStore = create<HouseStore>()(
               comfort: 3,
             },
             mapNotes: h.mapNotes || [],
+            status: h.status || "pending",
           }));
           const patch: Partial<HouseStore> = {
             houses: validHouses,
           };
           if (data.weights) {
             patch.weights = { ...DEFAULT_WEIGHTS, ...data.weights };
+          }
+          if (data.filters) {
+            patch.filters = { ...DEFAULT_FILTERS, ...data.filters };
+          }
+          if (data.filterPresets && Array.isArray(data.filterPresets)) {
+            patch.filterPresets = data.filterPresets;
           }
           if (validHouses.length > 0) {
             patch.selectedHouseId = validHouses[0].id;
@@ -171,12 +222,14 @@ export const useHouseStore = create<HouseStore>()(
       },
 
       exportData: () => {
-        const { houses, weights } = get();
+        const { houses, weights, filters, filterPresets } = get();
         const data = {
-          version: 1,
+          version: 2,
           exportedAt: new Date().toISOString(),
           houses,
           weights,
+          filters,
+          filterPresets,
         };
         return JSON.stringify(data, null, 2);
       },
@@ -198,6 +251,25 @@ export const useHouseStore = create<HouseStore>()(
         return weightedSum / 5;
       },
 
+      getRatingBreakdown: (house) => {
+        const { safety, valueForMoney, convenience, comfort } = house.ratings;
+        const weights = get().weights;
+        const totalWeight =
+          weights.safety +
+          weights.valueForMoney +
+          weights.convenience +
+          weights.comfort;
+        if (totalWeight === 0) {
+          return { safety: 0, valueForMoney: 0, convenience: 0, comfort: 0 };
+        }
+        return {
+          safety: safety * (weights.safety / totalWeight),
+          valueForMoney: valueForMoney * (weights.valueForMoney / totalWeight),
+          convenience: convenience * (weights.convenience / totalWeight),
+          comfort: comfort * (weights.comfort / totalWeight),
+        };
+      },
+
       hasActiveFilters: () => {
         const f = get().filters;
         return (
@@ -205,7 +277,8 @@ export const useHouseStore = create<HouseStore>()(
           f.rentMax !== null ||
           f.commuteMax !== null ||
           f.roomType !== "" ||
-          f.moveInDateBefore !== ""
+          f.moveInDateBefore !== "" ||
+          f.status !== ""
         );
       },
 
@@ -225,6 +298,7 @@ export const useHouseStore = create<HouseStore>()(
             if (new Date(house.moveInDate) > new Date(filters.moveInDateBefore))
               return false;
           }
+          if (filters.status && house.status !== filters.status) return false;
           return true;
         });
       },

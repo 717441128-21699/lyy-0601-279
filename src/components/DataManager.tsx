@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 export default function DataManager() {
-  const { exportData, importData, houses, weights } = useHouseStore();
+  const { exportData, importData, houses, weights, filterPresets } = useHouseStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState("");
@@ -110,9 +110,12 @@ export default function DataManager() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 text-xs text-gray-500">
+      <div className="grid grid-cols-3 gap-3 text-xs text-gray-500">
         <div className="px-2 py-1.5 rounded-lg bg-warm-50 text-center">
           房源: <span className="font-medium text-gray-700">{houses.length}</span>
+        </div>
+        <div className="px-2 py-1.5 rounded-lg bg-warm-50 text-center">
+          方案: <span className="font-medium text-gray-700">{filterPresets.length}</span>
         </div>
         <div className="px-2 py-1.5 rounded-lg bg-warm-50 text-center">
           权重:{" "}
